@@ -13,9 +13,9 @@ export const isTrackDto = (data: unknown): data is TrackDto => {
     'artistId' in data &&
     'albumId' in data &&
     'duration' in data &&
-    !!data.name &&
-    !!data.duration &&
-    (!!data.artistId || data.artistId === null) &&
-    (!!data.albumId || data.albumId === null)
+    typeof data.name === 'string' &&
+    typeof data.duration === 'number' &&
+    (typeof data.artistId === 'string' || data.artistId === null) &&
+    (typeof data.albumId === 'string' || data.albumId === null)
   );
 };

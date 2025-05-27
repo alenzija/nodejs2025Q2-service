@@ -42,16 +42,10 @@ export class TracksService {
     const track = this.findOne(id);
     const updatedTrack = {
       ...track,
-      name: 'name' in updateTrackDto ? updateTrackDto.name : track.name,
-      artistId:
-        'artistId' in updateTrackDto ? updateTrackDto.artistId : track.artistId,
-      albumId:
-        'albumId' in updateTrackDto ? updateTrackDto.albumId : track.albumId,
-      duration:
-        'duration' in updateTrackDto ? updateTrackDto.duration : track.duration,
+      ...updateTrackDto,
     };
     tracks = tracks.map((track) => (track.id === id ? updatedTrack : track));
-    return track;
+    return updatedTrack;
   }
 
   remove(id: string) {
