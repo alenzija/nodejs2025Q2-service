@@ -23,12 +23,13 @@ export class UsersService {
     if (!isCreateUserDto(createUserDto)) {
       throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
     }
+    const createdAt = Date.now();
     const newUser = {
       id: uuid(),
       ...createUserDto,
       version: 1,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt,
+      updatedAt: createdAt,
     };
     users = [...users, newUser];
     return deletePasswordFromResult(newUser);
