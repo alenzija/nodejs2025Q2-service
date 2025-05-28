@@ -24,15 +24,27 @@ export class TracksService {
     return tracks;
   }
 
-  findOne(id: string) {
+  findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
       throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
     }
     const track = tracks.find((track) => track.id === id);
     if (!track) {
-      throw new HttpException('track does not exist', HttpStatus.NOT_FOUND);
+      throw new HttpException('track does not exist', httpStatus);
     }
     return track;
+  }
+
+  updateByArtistId(id: string) {
+    tracks = tracks.map((track) =>
+      track.artistId === id ? { ...track, artistId: null } : track,
+    );
+  }
+
+  updateByAlbumId(id: string) {
+    tracks = tracks.map((track) =>
+      track.albumId === id ? { ...track, albumId: null } : track,
+    );
   }
 
   update(id: string, updateTrackDto: TrackDto) {

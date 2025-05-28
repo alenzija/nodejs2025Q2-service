@@ -1,13 +1,27 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { ArtistDto, isArtistDto } from './dto/artist.dto';
 import { Artist } from './entities/artist.entity';
 import { checkUUID } from 'src/services';
+import { AlbumsService } from 'src/albums/albums.service';
+import { TracksService } from 'src/tracks/tracks.service';
 
 let artists: Artist[] = [];
 
 @Injectable()
 export class ArtistsService {
+  constructor(
+    @Inject(forwardRef(() => AlbumsService))
+    private albumsService: AlbumsService,
+    @Inject(forwardRef(() => TracksService))
+    private tracksService: TracksService,
+  ) {}
   create(createArtistDto: ArtistDto) {
     if (!isArtistDto(createArtistDto)) {
       throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
@@ -24,16 +38,13 @@ export class ArtistsService {
     return artists;
   }
 
-  findOne(id: string) {
+  findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
       throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
     }
     const artist = artists.find((artist) => artist.id === id);
     if (!artist) {
-      throw new HttpException(
-        'artist with this id does not exist',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('artist with this id does not exist', httpStatus);
     }
     return artist;
   }
@@ -56,6 +67,8 @@ export class ArtistsService {
   remove(id: string) {
     const artist = this.findOne(id);
     artists = artists.filter((artist) => artist.id !== id);
+    this.tracksService.updateByArtistId(id);
+    this.albumsService.updateByArtistId(id);
     return artist;
   }
 }
