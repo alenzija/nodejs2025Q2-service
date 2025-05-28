@@ -1,13 +1,21 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
-import { Track } from './entities/track.entity';
 import { TrackDto, isTrackDto } from './dto/track.dto';
-import { checkUUID } from 'src/services';
-
-let tracks: Track[] = [];
+import { checkUUID } from '../services';
+import { DbService } from '../db/db.service';
 
 @Injectable()
 export class TracksService {
+  constructor(
+    @Inject(forwardRef(() => DbService))
+    private dbService: DbService,
+  ) {}
   create(createTrackDto: TrackDto) {
     if (!isTrackDto(createTrackDto)) {
       throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
@@ -16,35 +24,23 @@ export class TracksService {
       id: uuid(),
       ...createTrackDto,
     };
-    tracks = [...tracks, newTrack];
+    this.dbService.tracks = [...this.dbService.tracks, newTrack];
     return newTrack;
   }
 
   findAll() {
-    return tracks;
+    return this.dbService.tracks;
   }
 
   findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
       throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
     }
-    const track = tracks.find((track) => track.id === id);
+    const track = this.dbService.tracks.find((track) => track.id === id);
     if (!track) {
       throw new HttpException('track does not exist', httpStatus);
     }
     return track;
-  }
-
-  updateByArtistId(id: string) {
-    tracks = tracks.map((track) =>
-      track.artistId === id ? { ...track, artistId: null } : track,
-    );
-  }
-
-  updateByAlbumId(id: string) {
-    tracks = tracks.map((track) =>
-      track.albumId === id ? { ...track, albumId: null } : track,
-    );
   }
 
   update(id: string, updateTrackDto: TrackDto) {
@@ -56,13 +52,20 @@ export class TracksService {
       ...track,
       ...updateTrackDto,
     };
-    tracks = tracks.map((track) => (track.id === id ? updatedTrack : track));
+    this.dbService.tracks = this.dbService.tracks.map((track) =>
+      track.id === id ? updatedTrack : track,
+    );
     return updatedTrack;
   }
 
   remove(id: string) {
     const track = this.findOne(id);
-    tracks = tracks.filter((track) => track.id !== id);
+    this.dbService.tracks = this.dbService.tracks.filter(
+      (track) => track.id !== id,
+    );
+    this.dbService.favorites.tracks = this.dbService.favorites.tracks.filter(
+      (trackId) => trackId !== id,
+    );
     return track;
   }
 }

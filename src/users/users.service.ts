@@ -1,11 +1,16 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { CreateUserDto, isCreateUserDto } from './dto/create-user.dto';
 import { isUpdateUserDto, UpdateUserDto } from './dto/update-user.dto';
 import { type User } from './entities/user.entity';
 import { checkUUID } from '../services';
-
-let users: User[] = [];
+import { DbService } from '../db/db.service';
 
 const deletePasswordFromResult = (data: User | User[]) => {
   if (Array.isArray(data)) {
@@ -19,6 +24,10 @@ const deletePasswordFromResult = (data: User | User[]) => {
 
 @Injectable()
 export class UsersService {
+  constructor(
+    @Inject(forwardRef(() => DbService))
+    private dbService: DbService,
+  ) {}
   create(createUserDto: CreateUserDto) {
     if (!isCreateUserDto(createUserDto)) {
       throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
@@ -31,19 +40,19 @@ export class UsersService {
       createdAt,
       updatedAt: createdAt,
     };
-    users = [...users, newUser];
+    this.dbService.users = [...this.dbService.users, newUser];
     return deletePasswordFromResult(newUser);
   }
 
   findAll() {
-    return users;
+    return this.dbService.users;
   }
 
   findUnique(id: string) {
     if (!checkUUID(id)) {
       throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
     }
-    const user = users.find((user) => id === user.id);
+    const user = this.dbService.users.find((user) => id === user.id);
     if (!user) {
       throw new HttpException(
         "User with this id doesn't exist",
@@ -72,13 +81,17 @@ export class UsersService {
       version: user.version + 1,
       updatedAt: Date.now(),
     };
-    users = users.map((user) => (user.id === id ? updatedUser : user));
+    this.dbService.users = this.dbService.users.map((user) =>
+      user.id === id ? updatedUser : user,
+    );
     return deletePasswordFromResult(updatedUser);
   }
 
   remove(id: string) {
     const user = this.findUnique(id);
-    users = users.filter((user) => user.id !== id);
+    this.dbService.users = this.dbService.users.filter(
+      (user) => user.id !== id,
+    );
     return deletePasswordFromResult(user);
   }
 }

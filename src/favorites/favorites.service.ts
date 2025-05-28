@@ -5,16 +5,10 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
-import { Favorites } from './entities/favorite.entity';
-import { AlbumsService } from 'src/albums/albums.service';
-import { ArtistsService } from 'src/artists/artists.service';
-import { TracksService } from 'src/tracks/tracks.service';
-
-const favorites: Favorites = {
-  albums: [],
-  artists: [],
-  tracks: [],
-};
+import { AlbumsService } from '../albums/albums.service';
+import { ArtistsService } from '../artists/artists.service';
+import { TracksService } from '../tracks/tracks.service';
+import { DbService } from '../db/db.service';
 
 @Injectable()
 export class FavoritesService {
@@ -25,17 +19,19 @@ export class FavoritesService {
     private artistsService: ArtistsService,
     @Inject(forwardRef(() => TracksService))
     private tracksService: TracksService,
+    @Inject(forwardRef(() => DbService))
+    private dbService: DbService,
   ) {}
 
   findAll() {
     return {
-      albums: favorites.albums.map((albumId) =>
+      albums: this.dbService.favorites.albums.map((albumId) =>
         this.albumsService.findOne(albumId),
       ),
-      artists: favorites.artists.map((artistId) =>
+      artists: this.dbService.favorites.artists.map((artistId) =>
         this.artistsService.findOne(artistId),
       ),
-      tracks: favorites.tracks.map((trackId) =>
+      tracks: this.dbService.favorites.tracks.map((trackId) =>
         this.tracksService.findOne(trackId),
       ),
     };
@@ -47,20 +43,25 @@ export class FavoritesService {
       HttpStatus.UNPROCESSABLE_ENTITY,
     );
 
-    favorites.tracks = [...favorites.tracks, track.id];
+    this.dbService.favorites.tracks = [
+      ...this.dbService.favorites.tracks,
+      track.id,
+    ];
 
     return track;
   }
 
   deleteTrack(id: string) {
-    if (!favorites.tracks.find((trackId) => trackId === id)) {
+    if (!this.dbService.favorites.tracks.find((trackId) => trackId === id)) {
       throw new HttpException(
         'this track is not favorite',
         HttpStatus.NOT_FOUND,
       );
     }
 
-    favorites.tracks = favorites.tracks.filter((trackId) => trackId !== id);
+    this.dbService.favorites.tracks = this.dbService.favorites.tracks.filter(
+      (trackId) => trackId !== id,
+    );
   }
 
   addAlbum(id: string) {
@@ -69,20 +70,25 @@ export class FavoritesService {
       HttpStatus.UNPROCESSABLE_ENTITY,
     );
 
-    favorites.albums = [...favorites.albums, album.id];
+    this.dbService.favorites.albums = [
+      ...this.dbService.favorites.albums,
+      album.id,
+    ];
 
     return album;
   }
 
   deleteAlbum(id: string) {
-    if (!favorites.albums.find((albumId) => albumId === id)) {
+    if (!this.dbService.favorites.albums.find((albumId) => albumId === id)) {
       throw new HttpException(
         'this album is not favorite',
         HttpStatus.NOT_FOUND,
       );
     }
 
-    favorites.albums = favorites.albums.filter((albumId) => albumId !== id);
+    this.dbService.favorites.albums = this.dbService.favorites.albums.filter(
+      (albumId) => albumId !== id,
+    );
   }
 
   addArtist(id: string) {
@@ -91,19 +97,24 @@ export class FavoritesService {
       HttpStatus.UNPROCESSABLE_ENTITY,
     );
 
-    favorites.artists = [...favorites.artists, artist.id];
+    this.dbService.favorites.artists = [
+      ...this.dbService.favorites.artists,
+      artist.id,
+    ];
 
     return artist;
   }
 
   deleteArtist(id: string) {
-    if (!favorites.artists.find((artistId) => artistId === id)) {
+    if (!this.dbService.favorites.artists.find((artistId) => artistId === id)) {
       throw new HttpException(
         'this artist is not favorite',
         HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }
 
-    favorites.artists = favorites.artists.filter((artistId) => artistId !== id);
+    this.dbService.favorites.artists = this.dbService.favorites.artists.filter(
+      (artistId) => artistId !== id,
+    );
   }
 }

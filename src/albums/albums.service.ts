@@ -7,17 +7,14 @@ import {
 } from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { AlbumDto, isAlbumDto } from './dto/album.dto';
-import { Album } from './entities/album.entity';
-import { checkUUID } from 'src/services';
-import { TracksService } from 'src/tracks/tracks.service';
-
-let albums: Album[] = [];
+import { checkUUID } from '../services';
+import { DbService } from '../db/db.service';
 
 @Injectable()
 export class AlbumsService {
   constructor(
-    @Inject(forwardRef(() => TracksService))
-    private tracksService: TracksService,
+    @Inject(forwardRef(() => DbService))
+    private dbService: DbService,
   ) {}
 
   create(createAlbumDto: AlbumDto) {
@@ -28,29 +25,23 @@ export class AlbumsService {
       id: uuid(),
       ...createAlbumDto,
     };
-    albums = [...albums, newAlbum];
+    this.dbService.albums = [...this.dbService.albums, newAlbum];
     return newAlbum;
   }
 
   findAll() {
-    return albums;
+    return this.dbService.albums;
   }
 
   findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
       throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
     }
-    const album = albums.find((album) => album.id === id);
+    const album = this.dbService.albums.find((album) => album.id === id);
     if (!album) {
       throw new HttpException('album with this id does not exist', httpStatus);
     }
     return album;
-  }
-
-  updateByArtistId(id: string) {
-    albums = albums.map((album) =>
-      album.artistId === id ? { ...album, artistId: null } : album,
-    );
   }
 
   update(id: string, updateAlbumDto: AlbumDto) {
@@ -62,14 +53,23 @@ export class AlbumsService {
       ...album,
       ...updateAlbumDto,
     };
-    albums = albums.map((album) => (album.id === id ? updatedAlbum : album));
+    this.dbService.albums = this.dbService.albums.map((album) =>
+      album.id === id ? updatedAlbum : album,
+    );
     return updatedAlbum;
   }
 
   remove(id: string) {
     const album = this.findOne(id);
-    albums = albums.filter((album) => album.id !== id);
-    this.tracksService.updateByAlbumId(id);
+    this.dbService.albums = this.dbService.albums.filter(
+      (album) => album.id !== id,
+    );
+    this.dbService.tracks = this.dbService.tracks.map((track) =>
+      track.albumId === id ? { ...track, albumId: null } : track,
+    );
+    this.dbService.favorites.albums = this.dbService.favorites.albums.filter(
+      (albumId) => albumId !== id,
+    );
     return album;
   }
 }
