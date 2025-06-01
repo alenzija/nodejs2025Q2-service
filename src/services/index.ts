@@ -1,0 +1,1 @@
+export { checkUUID } from './checkUUID';
