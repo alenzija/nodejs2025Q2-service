@@ -53,10 +53,7 @@ export class FavoritesService {
 
   deleteTrack(id: string) {
     if (!this.dbService.favorites.tracks.find((trackId) => trackId === id)) {
-      throw new HttpException(
-        'this track is not favorite',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('Track was not found', HttpStatus.NOT_FOUND);
     }
 
     this.dbService.favorites.tracks = this.dbService.favorites.tracks.filter(
@@ -80,10 +77,7 @@ export class FavoritesService {
 
   deleteAlbum(id: string) {
     if (!this.dbService.favorites.albums.find((albumId) => albumId === id)) {
-      throw new HttpException(
-        'this album is not favorite',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('Album was not found', HttpStatus.NOT_FOUND);
     }
 
     this.dbService.favorites.albums = this.dbService.favorites.albums.filter(
@@ -108,7 +102,7 @@ export class FavoritesService {
   deleteArtist(id: string) {
     if (!this.dbService.favorites.artists.find((artistId) => artistId === id)) {
       throw new HttpException(
-        'this artist is not favorite',
+        'Artist was not found',
         HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }

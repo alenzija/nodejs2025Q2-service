@@ -18,7 +18,10 @@ export class TracksService {
   ) {}
   create(createTrackDto: TrackDto) {
     if (!isTrackDto(createTrackDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const newTrack = {
       id: uuid(),
@@ -34,18 +37,24 @@ export class TracksService {
 
   findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
-      throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Track id is invalid (not uuid)',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const track = this.dbService.tracks.find((track) => track.id === id);
     if (!track) {
-      throw new HttpException('track does not exist', httpStatus);
+      throw new HttpException('Track was not found', httpStatus);
     }
     return track;
   }
 
   update(id: string, updateTrackDto: TrackDto) {
     if (!isTrackDto(updateTrackDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const track = this.findOne(id);
     const updatedTrack = {

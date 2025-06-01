@@ -18,7 +18,10 @@ export class ArtistsService {
   ) {}
   create(createArtistDto: ArtistDto) {
     if (!isArtistDto(createArtistDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const newArtist = {
       id: uuid(),
@@ -34,18 +37,24 @@ export class ArtistsService {
 
   findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
-      throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const artist = this.dbService.artists.find((artist) => artist.id === id);
     if (!artist) {
-      throw new HttpException('artist with this id does not exist', httpStatus);
+      throw new HttpException('Artist was not found', httpStatus);
     }
     return artist;
   }
 
   update(id: string, updateArtistDto: ArtistDto) {
     if (!isArtistDto(updateArtistDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const artist = this.findOne(id);
     const updatedArtist = {

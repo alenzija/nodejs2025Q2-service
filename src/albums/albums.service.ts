@@ -19,7 +19,10 @@ export class AlbumsService {
 
   create(createAlbumDto: AlbumDto) {
     if (!isAlbumDto(createAlbumDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const newAlbum = {
       id: uuid(),
@@ -35,18 +38,24 @@ export class AlbumsService {
 
   findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
-      throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Album id is invalid (not uuid)',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const album = this.dbService.albums.find((album) => album.id === id);
     if (!album) {
-      throw new HttpException('album with this id does not exist', httpStatus);
+      throw new HttpException('Album was not found', httpStatus);
     }
     return album;
   }
 
   update(id: string, updateAlbumDto: AlbumDto) {
     if (!isAlbumDto(updateAlbumDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const album = this.findOne(id);
     const updatedAlbum = {

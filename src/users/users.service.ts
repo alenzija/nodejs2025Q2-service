@@ -30,7 +30,10 @@ export class UsersService {
   ) {}
   create(createUserDto: CreateUserDto) {
     if (!isCreateUserDto(createUserDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const createdAt = Date.now();
     const newUser = {
@@ -50,14 +53,14 @@ export class UsersService {
 
   findUnique(id: string) {
     if (!checkUUID(id)) {
-      throw new HttpException('id is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'User id is invalid (not uuid)',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const user = this.dbService.users.find((user) => id === user.id);
     if (!user) {
-      throw new HttpException(
-        "User with this id doesn't exist",
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('User was not found', HttpStatus.NOT_FOUND);
     }
     return user;
   }
@@ -69,11 +72,14 @@ export class UsersService {
 
   update(id: string, updateUserDto: UpdateUserDto) {
     if (!isUpdateUserDto(updateUserDto)) {
-      throw new HttpException('body is not valid', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Body does not contain required fields',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const user = this.findUnique(id);
     if (user.password !== updateUserDto.oldPassword) {
-      throw new HttpException('Old password is wrong', HttpStatus.FORBIDDEN);
+      throw new HttpException('oldPassword is wrong', HttpStatus.FORBIDDEN);
     }
     const updatedUser = {
       ...user,
