@@ -1,55 +1,51 @@
-import {
-  forwardRef,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
-import { v4 as uuid } from 'uuid';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Repository } from 'typeorm';
 import { ArtistDto, isArtistDto } from './dto/artist.dto';
 import { checkUUID } from '../services';
-import { DbService } from '../db/db.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Artist } from './entities/artist.entity';
 
 @Injectable()
 export class ArtistsService {
   constructor(
-    @Inject(forwardRef(() => DbService))
-    private dbService: DbService,
+    @InjectRepository(Artist)
+    private artists: Repository<Artist>,
   ) {}
-  create(createArtistDto: ArtistDto) {
+  async create(createArtistDto: ArtistDto) {
     if (!isArtistDto(createArtistDto)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const newArtist = {
-      id: uuid(),
-      ...createArtistDto,
-    };
-    this.dbService.artists = [...this.dbService.artists, newArtist];
+
+    const newArtist = new Artist();
+    newArtist.name = createArtistDto.name;
+    newArtist.grammy = createArtistDto.grammy;
+
+    await this.artists.save(newArtist);
     return newArtist;
   }
 
-  findAll() {
-    return this.dbService.artists;
+  async findAll() {
+    return await this.artists.find();
   }
 
-  findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
+  async findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const artist = this.dbService.artists.find((artist) => artist.id === id);
+    const artist = await this.artists.findOneBy({ id });
     if (!artist) {
       throw new HttpException('Artist was not found', httpStatus);
     }
     return artist;
   }
 
-  update(id: string, updateArtistDto: ArtistDto) {
+  async update(id: string, updateArtistDto: ArtistDto) {
     if (!isArtistDto(updateArtistDto)) {
       throw new HttpException(
         'Body does not contain required fields',
@@ -61,26 +57,26 @@ export class ArtistsService {
       ...artist,
       ...updateArtistDto,
     };
-    this.dbService.artists = this.dbService.artists.map((artist) =>
-      artist.id === id ? updatedArtist : artist,
-    );
+    await this.artists.save(updatedArtist);
     return updatedArtist;
   }
 
-  remove(id: string) {
+  async remove(id: string) {
     const artist = this.findOne(id);
-    this.dbService.artists = this.dbService.artists.filter(
-      (artist) => artist.id !== id,
-    );
-    this.dbService.tracks = this.dbService.tracks.map((track) =>
-      track.artistId === id ? { ...track, artistId: null } : track,
-    );
-    this.dbService.albums = this.dbService.albums.map((album) =>
-      album.artistId === id ? { ...album, artistId: null } : album,
-    );
-    this.dbService.favorites.artists = this.dbService.favorites.artists.filter(
-      (artistId) => artistId !== id,
-    );
+    await this.artists.delete({ id });
+
+    // this.dbService.artists = this.dbService.artists.filter(
+    //   (artist) => artist.id !== id,
+    // );
+    // this.dbService.tracks = this.dbService.tracks.map((track) =>
+    //   track.artistId === id ? { ...track, artistId: null } : track,
+    // );
+    // this.dbService.albums = this.dbService.albums.map((album) =>
+    //   album.artistId === id ? { ...album, artistId: null } : album,
+    // );
+    // this.dbService.favorites.artists = this.dbService.favorites.artists.filter(
+    //   (artistId) => artistId !== id,
+    // );
     return artist;
   }
 }
