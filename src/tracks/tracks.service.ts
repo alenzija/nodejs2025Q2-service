@@ -5,76 +5,103 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
-import { v4 as uuid } from 'uuid';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { TrackDto, isTrackDto } from './dto/track.dto';
 import { checkUUID } from '../services';
-import { DbService } from '../db/db.service';
+import { Track } from './entities/track.entity';
+import { ArtistsService } from 'src/artists/artists.service';
+import { AlbumsService } from 'src/albums/albums.service';
 
 @Injectable()
 export class TracksService {
   constructor(
-    @Inject(forwardRef(() => DbService))
-    private dbService: DbService,
+    @InjectRepository(Track)
+    private tracks: Repository<Track>,
+    @Inject(forwardRef(() => ArtistsService))
+    private artistsService: ArtistsService,
+    @Inject(forwardRef(() => AlbumsService))
+    private albumsService: AlbumsService,
   ) {}
-  create(createTrackDto: TrackDto) {
+
+  async create(createTrackDto: TrackDto) {
     if (!isTrackDto(createTrackDto)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const newTrack = {
-      id: uuid(),
-      ...createTrackDto,
+    const newTrack = new Track();
+    newTrack.duration = createTrackDto.duration;
+    newTrack.name = createTrackDto.name;
+
+    if (createTrackDto.artistId) {
+      const artist = await this.artistsService.findOne(
+        createTrackDto.artistId,
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+      newTrack.artist = artist;
+    } else {
+      newTrack.artist = null;
+    }
+
+    if (createTrackDto.albumId) {
+      const album = await this.albumsService.findOne(
+        createTrackDto.albumId,
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+      newTrack.album = album;
+    } else {
+      newTrack.album = null;
+    }
+
+    await this.tracks.save(newTrack);
+    return {
+      ...newTrack,
+      artistId: newTrack.artist ? newTrack.artist.id : null,
+      albumId: newTrack.album ? newTrack.album.id : null,
+      artist: undefined,
+      album: undefined,
     };
-    this.dbService.tracks = [...this.dbService.tracks, newTrack];
-    return newTrack;
   }
 
-  findAll() {
-    return this.dbService.tracks;
+  async findAll() {
+    return await this.tracks.find();
   }
 
-  findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
+  async findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
       throw new HttpException(
         'Track id is invalid (not uuid)',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const track = this.dbService.tracks.find((track) => track.id === id);
+    const track = await this.tracks.findOneBy({ id });
     if (!track) {
       throw new HttpException('Track was not found', httpStatus);
     }
     return track;
   }
 
-  update(id: string, updateTrackDto: TrackDto) {
+  async update(id: string, updateTrackDto: TrackDto) {
     if (!isTrackDto(updateTrackDto)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const track = this.findOne(id);
+    const track = await this.findOne(id);
     const updatedTrack = {
       ...track,
       ...updateTrackDto,
     };
-    this.dbService.tracks = this.dbService.tracks.map((track) =>
-      track.id === id ? updatedTrack : track,
-    );
+    await this.tracks.save(updatedTrack);
     return updatedTrack;
   }
 
-  remove(id: string) {
-    const track = this.findOne(id);
-    this.dbService.tracks = this.dbService.tracks.filter(
-      (track) => track.id !== id,
-    );
-    this.dbService.favorites.tracks = this.dbService.favorites.tracks.filter(
-      (trackId) => trackId !== id,
-    );
+  async remove(id: string) {
+    const track = await this.findOne(id);
+    await this.tracks.delete({ id });
     return track;
   }
 }

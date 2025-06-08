@@ -65,18 +65,6 @@ export class ArtistsService {
     const artist = this.findOne(id);
     await this.artists.delete({ id });
 
-    // this.dbService.artists = this.dbService.artists.filter(
-    //   (artist) => artist.id !== id,
-    // );
-    // this.dbService.tracks = this.dbService.tracks.map((track) =>
-    //   track.artistId === id ? { ...track, artistId: null } : track,
-    // );
-    // this.dbService.albums = this.dbService.albums.map((album) =>
-    //   album.artistId === id ? { ...album, artistId: null } : album,
-    // );
-    // this.dbService.favorites.artists = this.dbService.favorites.artists.filter(
-    //   (artistId) => artistId !== id,
-    // );
     return artist;
   }
 }
