@@ -1,8 +1,36 @@
-export interface User {
-  id: string; // uuid v4
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
+} from 'typeorm';
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({
+    type: 'varchar',
+    nullable: false,
+    unique: true,
+  })
   login: string;
-  password: string;
-  version: number; // integer number, increments on update
-  createdAt: number; // timestamp of creation
-  updatedAt: number; // timestamp of last update
+
+  @VersionColumn()
+  version: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @Column({
+    type: 'varchar',
+    nullable: false,
+  })
+  password?: string;
 }
