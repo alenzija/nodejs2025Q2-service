@@ -18,7 +18,7 @@ export class AlbumsService {
     @InjectRepository(Album)
     private albums: Repository<Album>,
     @Inject(forwardRef(() => ArtistsService))
-    private artistService: ArtistsService,
+    private artistsService: ArtistsService,
   ) {}
 
   async create(createAlbumDto: AlbumDto) {
@@ -33,7 +33,7 @@ export class AlbumsService {
     newAlbum.year = createAlbumDto.year;
 
     const artist = createAlbumDto.artistId
-      ? await this.artistService.findOne(
+      ? await this.artistsService.findOne(
           createAlbumDto.artistId,
           HttpStatus.UNPROCESSABLE_ENTITY,
         )

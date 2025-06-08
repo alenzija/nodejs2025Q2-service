@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto, isCreateUserDto } from './dto/create-user.dto';
 import { isUpdateUserDto, UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { checkUUID } from '../services';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
 const cookUsers = (data: User | User[]) => {
   if (Array.isArray(data)) {
