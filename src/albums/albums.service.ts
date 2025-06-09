@@ -40,13 +40,21 @@ export class AlbumsService {
       : null;
 
     newAlbum.artist = artist;
-
     await this.albums.save(newAlbum);
-    return newAlbum;
+    return {
+      ...newAlbum,
+      artistId: newAlbum.artist ? newAlbum.artist.id : null,
+      artist: undefined,
+    };
   }
 
   async findAll() {
-    return await this.albums.find();
+    const albums = await this.albums.find();
+    return albums.map((album) => ({
+      ...album,
+      artistId: album.artist ? album.artist.id : null,
+      artist: undefined,
+    }));
   }
 
   async findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
@@ -56,11 +64,18 @@ export class AlbumsService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    const album = await this.albums.findOneBy({ id });
+    const album = await this.albums.findOne({
+      where: { id },
+      relations: ['artist'],
+    });
     if (!album) {
       throw new HttpException('Album was not found', httpStatus);
     }
-    return album;
+    return {
+      ...album,
+      artistId: album.artist ? album.artist.id : null,
+      artist: undefined,
+    };
   }
 
   async update(id: string, updateAlbumDto: AlbumDto) {
@@ -70,13 +85,26 @@ export class AlbumsService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    const album = await this.findOne(id);
+
+    await this.findOne(id);
+    const artist = updateAlbumDto.artistId
+      ? await this.artistsService.findOne(
+          updateAlbumDto.artistId,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        )
+      : null;
     const updatedAlbum = {
-      ...album,
-      ...updateAlbumDto,
+      id,
+      artist,
+      name: updateAlbumDto.name,
+      year: updateAlbumDto.year,
     };
     await this.albums.save(updatedAlbum);
-    return updatedAlbum;
+    return {
+      ...updatedAlbum,
+      artistId: updatedAlbum.artist && updatedAlbum.artist.id,
+      artist: undefined,
+    };
   }
 
   async remove(id: string) {

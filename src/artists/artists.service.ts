@@ -52,7 +52,7 @@ export class ArtistsService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    const artist = this.findOne(id);
+    const artist = await this.findOne(id);
     const updatedArtist = {
       ...artist,
       ...updateArtistDto,
@@ -62,7 +62,7 @@ export class ArtistsService {
   }
 
   async remove(id: string) {
-    const artist = this.findOne(id);
+    const artist = await this.findOne(id);
     await this.artists.delete({ id });
 
     return artist;

@@ -66,7 +66,16 @@ export class TracksService {
   }
 
   async findAll() {
-    return await this.tracks.find();
+    const tracks = await this.tracks.find({
+      relations: ['artist', 'album'],
+    });
+    return tracks.map((track) => ({
+      ...track,
+      artistId: track.artist ? track.artist.id : null,
+      albumId: track.album ? track.album.id : null,
+      artist: undefined,
+      album: undefined,
+    }));
   }
 
   async findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
@@ -80,7 +89,13 @@ export class TracksService {
     if (!track) {
       throw new HttpException('Track was not found', httpStatus);
     }
-    return track;
+    return {
+      ...track,
+      artistId: track.artist ? track.artist.id : null,
+      albumId: track.album ? track.album.id : null,
+      artist: undefined,
+      album: undefined,
+    };
   }
 
   async update(id: string, updateTrackDto: TrackDto) {
@@ -90,13 +105,35 @@ export class TracksService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    const track = await this.findOne(id);
+    await this.findOne(id);
+    const artist = updateTrackDto.artistId
+      ? await this.artistsService.findOne(
+          updateTrackDto.artistId,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        )
+      : null;
+    const album = updateTrackDto.albumId
+      ? await this.albumsService.findOne(
+          updateTrackDto.albumId,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        )
+      : null;
+
     const updatedTrack = {
-      ...track,
-      ...updateTrackDto,
+      id,
+      album,
+      artist,
+      duration: updateTrackDto.duration,
+      name: updateTrackDto.name,
     };
     await this.tracks.save(updatedTrack);
-    return updatedTrack;
+    return {
+      ...updatedTrack,
+      album: undefined,
+      artist: undefined,
+      albumId: updatedTrack.album && updatedTrack.album.id,
+      artistId: updatedTrack.artist && updatedTrack.artist.id,
+    };
   }
 
   async remove(id: string) {
