@@ -11,6 +11,7 @@ services:
   server:
     build:
       context: .
+    image: alenzija219/nodejs2025q2-service
     environment:
       NODE_ENV: development
       POSTGRES_HOST: db
@@ -32,8 +33,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
   db:
-    image: postgres
+    image: alenzija219/postgres
     restart: always
     user: postgres
     volumes:
