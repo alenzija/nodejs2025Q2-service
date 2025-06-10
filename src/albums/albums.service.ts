@@ -5,80 +5,111 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
-import { v4 as uuid } from 'uuid';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AlbumDto, isAlbumDto } from './dto/album.dto';
 import { checkUUID } from '../services';
-import { DbService } from '../db/db.service';
+import { Album } from './entities/album.entity';
+import { ArtistsService } from '../artists/artists.service';
 
 @Injectable()
 export class AlbumsService {
   constructor(
-    @Inject(forwardRef(() => DbService))
-    private dbService: DbService,
+    @InjectRepository(Album)
+    private albums: Repository<Album>,
+    @Inject(forwardRef(() => ArtistsService))
+    private artistsService: ArtistsService,
   ) {}
 
-  create(createAlbumDto: AlbumDto) {
+  async create(createAlbumDto: AlbumDto) {
     if (!isAlbumDto(createAlbumDto)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const newAlbum = {
-      id: uuid(),
-      ...createAlbumDto,
+    const newAlbum = new Album();
+    newAlbum.name = createAlbumDto.name;
+    newAlbum.year = createAlbumDto.year;
+
+    const artist = createAlbumDto.artistId
+      ? await this.artistsService.findOne(
+          createAlbumDto.artistId,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        )
+      : null;
+
+    newAlbum.artist = artist;
+    await this.albums.save(newAlbum);
+    return {
+      ...newAlbum,
+      artistId: newAlbum.artist ? newAlbum.artist.id : null,
+      artist: undefined,
     };
-    this.dbService.albums = [...this.dbService.albums, newAlbum];
-    return newAlbum;
   }
 
-  findAll() {
-    return this.dbService.albums;
+  async findAll() {
+    const albums = await this.albums.find();
+    return albums.map((album) => ({
+      ...album,
+      artistId: album.artist ? album.artist.id : null,
+      artist: undefined,
+    }));
   }
 
-  findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
+  async findOne(id: string, httpStatus: HttpStatus = HttpStatus.NOT_FOUND) {
     if (!checkUUID(id)) {
       throw new HttpException(
         'Album id is invalid (not uuid)',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const album = this.dbService.albums.find((album) => album.id === id);
+    const album = await this.albums.findOne({
+      where: { id },
+      relations: ['artist'],
+    });
     if (!album) {
       throw new HttpException('Album was not found', httpStatus);
     }
-    return album;
+    return {
+      ...album,
+      artistId: album.artist ? album.artist.id : null,
+      artist: undefined,
+    };
   }
 
-  update(id: string, updateAlbumDto: AlbumDto) {
+  async update(id: string, updateAlbumDto: AlbumDto) {
     if (!isAlbumDto(updateAlbumDto)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const album = this.findOne(id);
+
+    await this.findOne(id);
+    const artist = updateAlbumDto.artistId
+      ? await this.artistsService.findOne(
+          updateAlbumDto.artistId,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        )
+      : null;
     const updatedAlbum = {
-      ...album,
-      ...updateAlbumDto,
+      id,
+      artist,
+      name: updateAlbumDto.name,
+      year: updateAlbumDto.year,
     };
-    this.dbService.albums = this.dbService.albums.map((album) =>
-      album.id === id ? updatedAlbum : album,
-    );
-    return updatedAlbum;
+    await this.albums.save(updatedAlbum);
+    return {
+      ...updatedAlbum,
+      artistId: updatedAlbum.artist && updatedAlbum.artist.id,
+      artist: undefined,
+    };
   }
 
-  remove(id: string) {
-    const album = this.findOne(id);
-    this.dbService.albums = this.dbService.albums.filter(
-      (album) => album.id !== id,
-    );
-    this.dbService.tracks = this.dbService.tracks.map((track) =>
-      track.albumId === id ? { ...track, albumId: null } : track,
-    );
-    this.dbService.favorites.albums = this.dbService.favorites.albums.filter(
-      (albumId) => albumId !== id,
-    );
+  async remove(id: string) {
+    const album = await this.findOne(id);
+    await this.albums.delete({ id });
     return album;
   }
 }

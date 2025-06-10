@@ -11,17 +11,29 @@
 git clone https://github.com/alenzija/nodejs2025Q2-service.git
 ```
 
-## Installing NPM modules
-
-```
-npm install
-```
-
 ## Running application
 
 ```
-npm start
+docker-compose up --build
 ```
+
+## Running only database
+
+```
+docker-compose up -d db
+```
+
+## Running only server
+
+```
+docker-compose up -d server
+```
+
+After starting the app on port (4000 as default) you can open in your browser OpenAPI documentation by typing http://localhost:4000/yaml-docs/ or http://localhost:4000/runtime-docs/. For more information about OpenAPI/Swagger please visit https://swagger.io/.
+
+## DockerHub
+
+https://hub.docker.com/repositories/alenzija219
 
 After starting the app on port (4000 as default) you can open
 in your browser OpenAPI documentation by typing http://localhost:4000/doc/.

@@ -1,103 +1,97 @@
-import {
-  forwardRef,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
-import { v4 as uuid } from 'uuid';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto, isCreateUserDto } from './dto/create-user.dto';
 import { isUpdateUserDto, UpdateUserDto } from './dto/update-user.dto';
-import { type User } from './entities/user.entity';
+import { User } from './entities/user.entity';
 import { checkUUID } from '../services';
-import { DbService } from '../db/db.service';
 
-const deletePasswordFromResult = (data: User | User[]) => {
+const cookUsers = (data: User | User[]) => {
   if (Array.isArray(data)) {
-    return data.map((user) => ({ ...user, password: undefined }));
+    return data.map((user) => ({
+      ...user,
+      password: undefined,
+      createdAt: +new Date(user.createdAt),
+      updatedAt: +new Date(user.updatedAt),
+    }));
   }
+
   return {
     ...data,
     password: undefined,
+    createdAt: +new Date(data.createdAt),
+    updatedAt: +new Date(data.updatedAt),
   };
 };
 
 @Injectable()
 export class UsersService {
   constructor(
-    @Inject(forwardRef(() => DbService))
-    private dbService: DbService,
+    @InjectRepository(User)
+    private users: Repository<User>,
   ) {}
-  create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto) {
     if (!isCreateUserDto(createUserDto)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const createdAt = Date.now();
-    const newUser = {
-      id: uuid(),
-      ...createUserDto,
-      version: 1,
-      createdAt,
-      updatedAt: createdAt,
-    };
-    this.dbService.users = [...this.dbService.users, newUser];
-    return deletePasswordFromResult(newUser);
+    const newUser = new User();
+
+    newUser.login = createUserDto.login;
+    newUser.password = createUserDto.password;
+
+    await this.users.save(newUser);
+
+    return cookUsers(newUser);
   }
 
-  findAll() {
-    return this.dbService.users;
+  async findAll() {
+    return cookUsers(await this.users.find());
   }
 
-  findUnique(id: string) {
+  async findUnique(id: string) {
     if (!checkUUID(id)) {
       throw new HttpException(
         'User id is invalid (not uuid)',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const user = this.dbService.users.find((user) => id === user.id);
+    const user = await this.users.findOneBy({ id });
     if (!user) {
       throw new HttpException('User was not found', HttpStatus.NOT_FOUND);
     }
     return user;
   }
 
-  findOne(id: string) {
-    const user = this.findUnique(id);
-    return deletePasswordFromResult(user);
+  async findOne(id: string) {
+    const user = await this.findUnique(id);
+    return cookUsers(user);
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     if (!isUpdateUserDto(updateUserDto)) {
       throw new HttpException(
         'Body does not contain required fields',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const user = this.findUnique(id);
+    const user = await this.findUnique(id);
     if (user.password !== updateUserDto.oldPassword) {
       throw new HttpException('oldPassword is wrong', HttpStatus.FORBIDDEN);
     }
     const updatedUser = {
       ...user,
       password: updateUserDto.newPassword,
-      version: user.version + 1,
-      updatedAt: Date.now(),
     };
-    this.dbService.users = this.dbService.users.map((user) =>
-      user.id === id ? updatedUser : user,
-    );
-    return deletePasswordFromResult(updatedUser);
+    await this.users.save(updatedUser);
+    return cookUsers(updatedUser);
   }
 
-  remove(id: string) {
-    const user = this.findUnique(id);
-    this.dbService.users = this.dbService.users.filter(
-      (user) => user.id !== id,
-    );
-    return deletePasswordFromResult(user);
+  async remove(id: string) {
+    const user = await this.findUnique(id);
+    await this.users.delete(id);
+    return cookUsers(user);
   }
 }
